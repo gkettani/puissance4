@@ -191,3 +191,103 @@ maxConnected(R,['-'|X],N):- maxConnected(R,X,Ns),
 			    N is Ns+1.
 maxConnected(R,[R|X],N):- maxConnected(R,X,Ns),
 			  N is Ns+1.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+% Idea: we start by implement functions that verify the columns, the rows or the diagonals in which we can potentially win (with 4 connected pieces), 
+% which means they are currently occupied by our piece or they are simply empty
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+
+% column
+open(board(T),X):- append(_, [C|_], T), % check if there's a column in the board
+	           append(_,[P1,P2,P3,P4|_],C), % where we 4 connected pieces
+                   (P1 == '-' | P1 == X), (P2 == '-' | P2 == X), % of X or empty space
+                   (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
+		   
+% row
+open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+		   append(I3,[P3|_],C3),
+		   append(I4,[P4|_],C4),
+		   length(I1,M), length(I2,M), length(I3,M), length(I4,M), % and every single piece is in the same height (by using the same M)
+                   (P1 == '-' | P1 == X), (P2 == '-' | P2 == X), % the grid is empty or occupied by X
+                   (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
+		   
+		   
+/*
+ diagonal:
+ acutally there are two cases:
+	1. x
+	    x
+	     x
+	      x
+	      
+	2.	x
+	       x
+	      x
+	     x
+*/
+
+% diagonal case1:
+open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+		   append(I3,[P3|_],C3),
+		   append(I4,[P4|_],C4),
+		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+		   M2 is M1+1, M3 is M2+1, M4 is M3+1, %...and every piece is within the same diagonal of case 1
+                   (P1 == '-' | P1 == X), (P2 == '-' | P2 == X), % the grid is empty or occupied by X
+                   (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
+		   
+% diagonal case2:
+open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+		   append(I3,[P3|_],C3),
+		   append(I4,[P4|_],C4),
+		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+		   M2 is M1-1, M3 is M2-1, M4 is M3-1, %...and every piece is within the same diagonal of case 2
+                   (P1 == '-' | P1 == X), (P2 == '-' | P2 == X), % the grid is empty or occupied by X
+                   (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	     
+% In the next part, we are supposed to count elements that are necessary to build our heuristic function
+% When it comes to h, personally I think it could be h=2*x3+x2, where x3 means the number of 3 connected pieces in the board 
+% and x2 the number of 2 connected pieces, but this version is naive and the coefficent for x3 is actually arbitary
+% And if we consider the case like oxxo and _xx_, they should have different weight in fact
+!!!TO BE DISCUSSED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+
+% threes(X,T) is true if player X has any three connect piece in the board 
+
+% column
+threes(board(T),X):- append(_, [C|_], T), % if a column in the board
+	           append(_,[P1,P2,P3|_],C), %  which has 3 connected pieces
+                   P1 == X, P2 == X, P3 == X. % of player X
+		   
+% row
+threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+                   append(I3,[P3|_],C3),
+                   length(I1,M), length(I2,M), length(I3,M), % at the same height
+                   P1 == X, P2 == X, P3 == X. % all of them are X
+
+% check if there's a diagonal in T with 3 connected pieces of X
+% diagonal case1
+threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+                   append(I3,[P3|_],C3),
+                   length(I1,M1), length(I2,M2), length(I3,M3),
+		   M2 is M1+1, M3 is M2+1, % in the diagonal of case 1
+                   P1 == X, P2 == X, P3 == X. % all of them are X
+
+% diagonal case2
+threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+		   append(I1,[P1|_],C1), % that all of them contain a piece 
+		   append(I2,[P2|_],C2),
+                   append(I3,[P3|_],C3),
+                   length(I1,M1), length(I2,M2), length(I3,M3),
+		   M2 is M1-1, M3 is M2-1, % in the diagonal of case 2
+                   P1 == X, P2 == X, P3 == X. % all of them are X
