@@ -193,7 +193,7 @@ maxConnected(R,[R|X],N):- maxConnected(R,X,Ns),
 			  N is Ns+1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-% Idea: we start by implement functions that verify the columns, the rows or the diagonals in which we can potentially win (with 4 connected pieces), 
+% Idea: we start by implementing functions that verify the columns, the rows or the diagonals in which we can potentially win (with 4 connected pieces), 
 % which means they are currently occupied by our piece or they are simply empty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
@@ -255,7 +255,7 @@ open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns i
 % When it comes to h, personally I think it could be h=2*x3+x2, where x3 means the number of 3 connected pieces in the board 
 % and x2 the number of 2 connected pieces, but this version is naive and the coefficent for x3 is actually arbitary
 % And if we consider the case like oxxo and _xx_, they should have different weight in fact
-!!!TO BE DISCUSSED
+% !!!TO BE DISCUSSED
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
 % threes(X,T) is true if player X has any three connect piece in the board 
