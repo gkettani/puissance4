@@ -198,13 +198,13 @@ maxConnected(R,[R|X],N):- maxConnected(R,X,Ns),
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
 % column
-open(board(T),X):- append(_, [C|_], T), % check if there's a column in the board
+open(T,X):- append(_, [C|_], T), % check if there's a column in the board
 	           append(_,[P1,P2,P3,P4|_],C), % where we 4 connected pieces
                    (P1 == '-' | P1 == X), (P2 == '-' | P2 == X), % of X or empty space
                    (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
 		   
 % row
-open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+open(T,X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
 		   append(I3,[P3|_],C3),
@@ -229,7 +229,7 @@ open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns i
 */
 
 % diagonal case1:
-open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+open(T,X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
 		   append(I3,[P3|_],C3),
@@ -240,7 +240,7 @@ open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns i
                    (P3 == '-' | P3 == X), (P4 == '-' | P4 == X).
 		   
 % diagonal case2:
-open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
+open(T,X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns in the board
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
 		   append(I3,[P3|_],C3),
@@ -261,12 +261,12 @@ open(board(T),X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns i
 % threes(X,T) is true if player X has any three connect piece in the board 
 
 % column
-threes(board(T),X):- append(_, [C|_], T), % if a column in the board
+threes(T,X):- append(_, [C|_], T), % if a column in the board
 	           append(_,[P1,P2,P3|_],C), %  which has 3 connected pieces
                    P1 == X, P2 == X, P3 == X. % of player X
 		   
 % row
-threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+threes(T,X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
                    append(I3,[P3|_],C3),
@@ -275,7 +275,7 @@ threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns
 
 % check if there's a diagonal in T with 3 connected pieces of X
 % diagonal case1
-threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+threes(T,X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
                    append(I3,[P3|_],C3),
@@ -284,7 +284,7 @@ threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns
                    P1 == X, P2 == X, P3 == X. % all of them are X
 
 % diagonal case2
-threes(board(T),X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
+threes(T,X):- append(_,[C1,C2,C3|_],T), % check if 3 connected columns 
 		   append(I1,[P1|_],C1), % that all of them contain a piece 
 		   append(I2,[P2|_],C2),
                    append(I3,[P3|_],C3),
