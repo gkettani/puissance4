@@ -234,11 +234,22 @@ make_move2(computer2, Player, Board1, Board2)
 %.......................................
 % It retrieves a list of possible moves (empty columns) on a board.
 % 
+/*
 possible_moves(Board,List) 
 	:-	not(wins(Board,'X')),	%%% if either player already won, 
 							%%% then there are no available moves
 		not(wins(Board,'O')),
 		bagof(N, nth1(N,Board,'e'), List). % Fail if List should be empty
+*/		
+		
+possibleMoves(board(T),0) :- append([],[C|_],T),
+   length(C,6), % the 7th element (the highest)
+   member('-',C). % is empty
+
+possibleMoves(board(T),0) :- append([C1],[C|_],T),
+    length(C1,1), % the 2nd element in the row
+    length(C,6),  % the 7th element (the highest)
+    member('-',C).% is empty
 		
 %.......................................
 % utility
