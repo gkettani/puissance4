@@ -242,14 +242,15 @@ possible_moves(Board,List)
 		bagof(N, nth1(N,Board,'e'), List). % Fail if List should be empty
 */		
 		
-possibleMoves(board(T),0) :- append([],[C|_],T),
-   length(C,6), % the 7th element (the highest)
+possible_moves(T) :- append([],[C|_],T),
+   length(C,6), % the 6th element (the highest)
    member('-',C). % is empty
 
-possibleMoves(board(T),0) :- append([C1],[C|_],T),
+possible_moves(T) :- append([C1],[C|_],T),
     length(C1,1), % the 2nd element in the row
-    length(C,6),  % the 7th element (the highest)
+    length(C,6),  % the 6th element (the highest)
     member('-',C).% is empty
+
 		
 %.......................................
 % utility
