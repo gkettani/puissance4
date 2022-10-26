@@ -21,6 +21,7 @@ maximizing('X').
 minimizing('O').	
 % The player playing o is always trying to minimize board position utility
 
+maxDepth(4).
 %%%%%%%%%%%%%%%%%%
 %%% SHOW BOARD %%%
 %%%%%%%%%%%%%%%%%%
@@ -268,16 +269,17 @@ utility(_,0).
 % of waiting for the computer to search the entire minimax tree
 % by simply selecting a random column. 
  
-minimax(Depth,[['-','-','-','-','-','-'],
+minimax(_,[['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-']],Mark,Column,Utility) 
+                ['-','-','-','-','-','-']],_,Column,_) 
 	:- random_between(0,6,Column), !.
 
 minimax(Depth,Board,Mark,Column,Utility) :-
+ maxDepth(D), Depth<D,
  Depth2 is Depth+1,
  possible_moves(Board,List), !,		%%% get the list of possible moves
 	best(Depth2,Board,Mark,List,Column,Utility), !.	
@@ -286,7 +288,7 @@ minimax(Depth,Board,Mark,Column,Utility) :-
 % If there are no more available moves, then the minimax value is 
 % the utility of the given board position 
  
-minimax(Depth,Board,Mark,Column,Utility) :- utility(Board,Utility).
+minimax(_,Board,_,_,Utility) :- utility(Board,Utility).
 
 %.......................................
 % best : A adapter !
@@ -348,7 +350,7 @@ better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) :- R < 6, !
 better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Output and dispay
+%%% Output and display
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 output_players :-
@@ -364,5 +366,5 @@ output_players :-
  output_winner(Board) :- write('No winner: Draw').
 
 output_value(1,Square,Utility) 
-	:- nl, write('Square '), write(Square), write(', utility: '), write(Utility), !.
+	:- nl, write('Column '), write(Square), write(', utility: '), write(Utility), !.
 output_value(Depth,Square,Utility).
