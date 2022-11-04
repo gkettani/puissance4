@@ -1,34 +1,32 @@
-% Copyright 2016 Ramon Viñas, Marc Roig
-%
-% Licensed under the Apache License, Version 2.0 (the "License");
-% you may not use this file except in compliance with the License.
-% You may obtain a copy of the License at
-%
-%     http://www.apache.org/licenses/LICENSE-2.0
-%
-% Unless required by applicable law or agreed to in writing, software
-% distributed under the License is distributed on an "AS IS" BASIS,
-% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-% See the License for the specific language governing permissions and
-% limitations under the License.
+:-dynamic board/1.
+:-dynamic player/2.
 
 %%%%%%%%%%%%%%%%%%
-%%%%% BOARD %%%%%%
+%%%%% PARAMS %%%%%
 %%%%%%%%%%%%%%%%%%
-%Initialize empty board (matrix of dimensions [columns=7, rows=6]. This board representation will make gameplay easier than if we used [rows, columns])
-initial(board([['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-'],
-	       ['-','-','-','-','-','-']])).
+next_player(1,2).		%%% determines the next player after the given player
+next_player(2,1). 
 
+inverse_mark('X','O'). 	%%% determines the opposite of the given mark
+inverse_mark('O','X'). 
+
+player_mark(1,'X').		%%% the mark for the given player
+player_mark(2,'O'). 
+ 
+opponent_mark(1,'O'). 	%%% the inverse mark of the given player
+opponent_mark(2,'X'). 
+
+maximizing('X').	
+% The player playing x is always trying to maximize board position utility
+minimizing('O').	
+% The player playing o is always trying to minimize board position utility
+
+maxDepth(4).
 %%%%%%%%%%%%%%%%%%
 %%% SHOW BOARD %%%
 %%%%%%%%%%%%%%%%%%
 %show(X) shows board X
-show(board(X)):- write('  A B C D E F G'), nl,
+show(X):- write('  A B C D E F G'), nl,
 		 iShow(X,6).
 
 %show(X,N) shows lines [N .. 1] of board X
@@ -46,54 +44,86 @@ iShowLine([],_).
 iShowLine([[X|X2]|XS],[X2|XS2]):- write(X), write(' '),
 			          iShowLine(XS,XS2).
 
-%%%%%%%%%%%%%%%%%%
-%%%% GAMEPLAY %%%%
-%%%%%%%%%%%%%%%%%%
-% Initializes board and starts the game
-connect4:- initial(X),
-	   show(X),
-	   nextMove('X',X), !.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main program
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%nextMove(J,X) J is the player that needs to move ('O' or 'X') and X is the board. Checks if the game has finished. If it hasn't finished, performs next move.
-nextMove('X',X):- wins('O',X),
-		  write('Machine wins!').
-nextMove('O',X):- wins('X',X),
-		  write('You win!').
-nextMove(_,X):- full(X),
-		write('Draw').
-nextMove('X',X):- repeat, %repeats in case a column is full
-		  readColumn(C),
-		  play('X',C,X,X2), !,
-		  show(X2),
-		  nextMove('O',X2). 
-nextMove('O',X):- machine('O','X',X,X2),
-		  show(X2),
-		  nextMove('X',X2).
+jouer :- welcome,				%%% Display welcome message, initialize game 
+			play(1),			%%% Play the game starting with player 1 
+				goodbye.        %%% Display end of game message
+jouer :- goodbye.
 
-%play(X,P,T,T2) is satisfied if T2 is the board T after player X moves in column P
-play(X,P,board(T),board(T2)):- append(I,[C|F],T),
-			       length(I,P), 
-		               playColumn(X,C,C2),
-			       append(I,[C2|F],T2).
+welcome :- initialize, nl, nl, write('Début du jeu Puissance 4'),
+			read_players, output_players.
 
-%playColumn(X,C,C2) is satisfied if column C2 is column C after player X plays there
-playColumn(X,['-'],[X]):- !. % last spot in column
-playColumn(X,['-',A|AS],[X,A|AS]):- A \== ('-'), !. % play above someone's piece
-playColumn(X,['-'|AS],['-'|AS2]):- playColumn(X,AS,AS2). % descend column
+initialize :-	%%% random seed may use time to initialize random number generator
+				retractall(player(_,_)), retractall(board(_)),	
+				asserta(board([['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-'],
+                               ['-','-','-','-','-','-']])). 
+				%%% create an empty board
 
-%wins(X,T) is satisfied if player X has won in board T
+goodbye :- 	board(Board), nl, nl, write('Game over: '), 
+				output_winner(Board),
+					retractall(player(_,_)), retractall(board(_)),	
+						read_play_again(V), !, 
+							(V == 'Y' ; V == 'y'), !, jouer.
+
+read_play_again(V) :- nl, nl, write('Play again (Y/N)? '), read(V),
+						(V == 'y' ; V == 'Y' ; V == 'n' ; V == 'N'), !.
+read_play_again(V) :- nl, nl, write('Please enter Y or N.'),
+						read_play_again(V).
+
+read_players 
+	:- nl, nl, write('Number of human players? '), read(N), set_players(N).
+
+set_players(0) :- asserta(player(1,computer1)), asserta(player(2,computer2)), !.
+
+set_players(1) :- nl, write('Voulez vous jouer X ou O (X commence en premier)? '),
+					read(M), human_playing(M), !.
+
+set_players(2) :- asserta(player(1,human)), asserta(player(2,human)), !.
+ 
+set_players(_) :- nl, write('Veuillez taper 0, 1, ou 2.'), read_players.
+
+human_playing(M) :-
+	(M == 'x' ; M == 'X'), 
+		asserta(player(1,human)), asserta(player(2,computer1)), !.
+
+human_playing(M) :-
+	(M == 'o' ; M == 'O'),
+		asserta(player(1,computer1)), asserta(player(2,human)), !.
+
+human_playing(_) :- nl, write('Veuillez taper X ou O.'), set_players(1).
+ 
+play(Player1) 
+	:- 	board(Board), show(Board), 
+			not(game_over(Player1, Board)), 
+				make_move(Player1, Board), !,
+					next_player(Player1,Player2), play(Player2).
+
+%.......................................
+% wins
+%.......................................
+% Players win by having their mark X in one of the following configurations:
+% 
+%wins(T, X) is satisfied if the player with Mark X has won in board T
 %check if there's a column in T with 4 connected pieces of player X
-wins(X,board(T)):- append(_, [C|_], T), % check if there's a column...
+wins(T, X):- append(_, [C|_], T), % check if there's a column...
 	           append(_,[X,X,X,X|_],C). % ...which has 4 connected pieces of player X
 %check if there's a row in T with 4 connected pieces of player X
-wins(X,board(T)):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
+wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
 		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
 		   append(I2,[X|_],C2),
 		   append(I3,[X|_],C3),
 		   append(I4,[X|_],C4),
 		   length(I1,M), length(I2,M), length(I3,M), length(I4,M). %...and every piece is in the same height
 %check if there's a diagonal (type \) in T with 4 connected pieces of player X
-wins(X,board(T)):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
+wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
 		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
 		   append(I2,[X|_],C2),
 		   append(I3,[X|_],C3),
@@ -101,23 +131,45 @@ wins(X,board(T)):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns e
 		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
 		   M2 is M1+1, M3 is M2+1, M4 is M3+1. %...and every piece is within the same diagonal \
 %check if there's a diagonal (type /) in T with 4 connected pieces of player X
-wins(X,board(T)):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
+wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
 		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
 		   append(I2,[X|_],C2),
 		   append(I3,[X|_],C3),
 		   append(I4,[X|_],C4),
 		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
 		   M2 is M1-1, M3 is M2-1, M4 is M3-1. %...and every piece is within the same diagonal /
-						
-%full(T) is satisfied if there isn't any free spot ('-')
-full(board(T)):- \+ (append(_,[C|_],T),
-		 append(_,['-'|_],C)).
 
-%%%%%%%%%%%%%%%%%%
-%%% READ MOVES %%%
-%%%%%%%%%%%%%%%%%%
+%.......................................
+% move
+%.......................................
+%move(T,P,X,T2) is satisfied if T2 is the board T after player with the mark X moves in column P
+% 
+move(T,P,X,T2):- append(I,[C|F],T),
+			       length(I,P), 
+    			   set_item(X,C,C2),
+			       append(I,[C2|F],T2).
+
+%set_item(X,C,C2) is satisfied if column C2 is column C after player with the mark X plays there
+set_item(X,['-'],[X]):- !. % last spot in column
+set_item(X,['-',A|AS],[X,A|AS]):- A \== ('-'), !. % play above someone's piece
+set_item(X,['-'|AS],['-'|AS2]):- set_item(X,AS,AS2). % descend column
+
+%.......................................
+% game_over
+%.......................................
+% Game is over if opponent wins or if none of the columns are empty
+%
+game_over(Player,Board) :- opponent_mark(Player, Mark), wins(Board, Mark), !.
+game_over(_,Board) :- isFull(Board). 
+
+%isFull(T) is satisfied if there isn't any free spot ('-')
+isFull(T):- \+ (append(_,[C|_],T), append(_,['-'|_],C)).
+
+%.......................................
+% readColumn
+%.......................................
 %reads a column
-readColumn(C):- nl, write('Column: '),
+readColumn(C):- nl, write(' , veuillez choisir une colonne : '),
 		repeat,
 		get_char(L),
 		associateColumn(L,C),
@@ -140,54 +192,179 @@ col(4).
 col(5).
 col(6).
 
-%%%%%%%%%%%%%%%%%%
-%%%%% MACHINE %%%%
-%%%%%%%%%%%%%%%%%%
-%machine(R,O,T,T2) Let R be the machine piece, O the opponent's piece and T the board game. Then T2 is board T after the machine movement
-% win if possible
-machine(R,_,T,T2):- iMachine(R,T,C,T2),
-		    nl, write('machine: '),
-		    associateChar(L,C),
-		    write(L),
-		    nl,!.
-% otherwise, if machine can't win within a move, play a move that doesn't allow opponent O to win and that would allow us to obtain a connected 4
-machine(R,O,T,T2):- findall((Col,TA), (col(Col), play(R,Col,T,TA),\+ iMachine(O,TA,_,_), goodMove(R,Col,T)), [(C,T2)|_]),
-		    nl, write('machine: '),
-		    associateChar(L,C),
-		    write(L),
-		    nl,!.
-% otherwise play a move that doesn't allow opponent O to win
-machine(R,O,T,T2):- findall((Col,TA), (col(Col), play(R,Col,T,TA),\+ iMachine(O,TA,_,_)), [(C,T2)|_]),
-		    nl, write('machine: '),
-		    associateChar(L,C),
-		    write(L), nl,
-		    write('-'),!.
-% otherwise play a move intercepting one of the future winning options of opponent O
-machine(R,O,T,T2):- iMachine(O,T,C,_),
-		    play(R,C,T,T2),
-		    nl, write('machine: '),
-		    associateChar(L,C),
-		    write(L), nl.
-% otherwise play wherever
-machine(R,_,T,T2):- col(C),
-		    play(R,C,T,T2),
-		    nl, write('machine: '),
-		    associateChar(L,C),
-		    write(L), nl.
-				  
-%iMachine(R,T,C,T2) is satisfied if player R can play in column C of board T and obtain a winning board T2
-iMachine(R,T,C,T2):- findall((Col,TA), (col(Col), play(R,Col,T,TA),wins(R,TA)),[(C,T2)|_]).
+%.......................................
+% make_move
+%.......................................
+% It requests next move from human or computer,
+% then it applies that move to the given board
+% 
+make_move(Player, Board1) 
+	:- 	player(Player, Type_Joueur), 
+			make_move2(Type_Joueur, Player, Board1, Board2), 
+				retract(board(_)), asserta(board(Board2)).
 
-%We consider that a good move is one allowing us to win in a column. Further improvements: rows and diagonals.
-goodMove(R,Col,board(T)):- append(I,[C|_],T),
-			   length(I,Col),
-			   maxConnected(R,C,MaxConn),
-			   MaxConn >= 4.						
+make_move2(human, Player, Board1, Board2) 
+	:-	nl, nl, write('C\'est au tour du joueur '), write(Player), readColumn(Column), !
+    			, player_mark(Player, Mark), move(Board1,Column,Mark,Board2), !.
+				
+make_move2(human, Player, Board1, Board2) 
+	:-	nl, nl, write('Veuillez choisir une lettre entre A et G.'),
+			make_move2(human,Player,Board1,Board2).
 
-% maxConnected(R,C,MaxConn) MaxConn is the maximum number of connected pieces that player R has/could have in column C
-maxConnected(_,[],0).
-maxConnected(R,[X|_],0):- X\=R.
-maxConnected(R,['-'|X],N):- maxConnected(R,X,Ns),
-			    N is Ns+1.
-maxConnected(R,[R|X],N):- maxConnected(R,X,Ns),
-			  N is Ns+1.
+% A move computed thanks to minimax is made of values for the 3 variables 
+% Mark, Column and Utility
+
+make_move2(computer1, Player, Board1, Board2) 
+	:-	nl, nl, write('Computer1 est entrain de réflechir ...'), nl,
+			player_mark(Player, Mark),
+				minimax(0, Board1, Mark, Column, _),
+					move(Board1,Column,Mark,Board2), !,
+		nl, nl, write('Computer1 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
+			write(L), write('.').
+
+make_move2(computer2, Player, Board1, Board2) 
+	:-	nl, nl, write('Computer2 est entrain de réflechir ...'), nl,
+			player_mark(Player, Mark),
+				repeat, random_between(0,6,Column),
+					move(Board1,Column,Mark,Board2), !,
+		nl, write('Computer2 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
+			write(L), write('.').
+
+%.......................................
+% possible_moves : A adapter !
+%.......................................
+% It retrieves a list of possible moves (empty columns) on a board.
+% 
+
+possible_moves(Board,List) 
+	:-	not(wins(Board,'X')),	%%% if either player already won, 
+							%%% then there are no available moves
+		not(wins(Board,'O')),
+		top_line(Board, 0, List), !. % get the list of the column where a player can place his mark 
+		
+top_line([], _, []).
+top_line([[E|_]|R], N, [N|L]) :- E == '-', Ns is N+1, top_line(R, Ns, L).
+top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
+
+		
+%.......................................
+% utility
+%.......................................
+% It computes the value of a given board position
+% 
+utility(Board,1) :- wins(Board,'X'), !.
+utility(Board,-1) :- wins(Board,'O'), !.
+utility(_,0).
+
+%.......................................
+% minimax : A adapter !
+%.......................................
+% The minimax algorithm always assumes an optimal opponent.
+% For tic-tac-toe, optimal play will always result in a draw, 
+% so the algorithm is effectively playing not-to-lose. 
+
+% For the opening move against an optimal player, the best 
+% minimax can ever hope for is a draw. Technically speaking, 
+% any opening move is acceptable. Save the user the trouble 
+% of waiting for the computer to search the entire minimax tree
+% by simply selecting a random column. 
+ 
+minimax(_,[['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-'],
+                ['-','-','-','-','-','-']],_,Column,_) 
+	:- random_between(0,6,Column), !.
+
+minimax(Depth,Board,Mark,Column,Utility) :-
+ maxDepth(D), Depth<D,
+ Depth2 is Depth+1,
+ possible_moves(Board,List), !,		%%% get the list of possible moves
+	best(Depth2,Board,Mark,List,Column,Utility), !.	
+					%%% recursively determine the best available move
+
+% If there are no more available moves, then the minimax value is 
+% the utility of the given board position 
+ 
+minimax(_,Board,_,_,Utility) :- utility(Board,Utility).
+
+%.......................................
+% best : A adapter !
+%.......................................
+% determines the best move in a given list of moves by 
+% recursively calling minimax
+% 
+% if there is only one move left in the list... 
+
+best(Depth,Board,Mark,[Column1],Column1,Utility) 
+	:-	move(Board,Column1,Mark,Board2),	%%% apply that move to the board,
+			inverse_mark(Mark,Mark2), !,
+			%%% then recursively search for the utility of that move.
+				minimax(Depth,Board2,Mark2,_,Utility), !,	 
+				output_value(Depth,Column1,Utility), !.
+
+% if there is more than one move in the list... 
+
+best(Depth,Board,Mark,[Column1|Other_Moves],Column,Utility) 
+	:-	move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
+			inverse_mark(Mark,Mark2), !,
+				minimax(Depth,Board2,Mark2,_,Utility1),	
+			%%% recursively search for the utility value of that move
+			%%% and determine the best move of the remaining moves
+				best(Depth,Board,Mark,Other_Moves,Column2,Utility2),	
+				output_value(Depth,Column1,Utility1),
+			better(Depth,Mark,Column1,Utility1,Column2,Utility2,Column,Utility). 	
+	%%% choose the better of the two moves based on their utility values
+
+%.......................................
+% better : A adapter !
+%.......................................
+% returns the better of two moves based on their utility values.
+%
+% if both moves have the same utility value, then one is chosen at random. 
+%
+better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
+	:-	maximizing(M),				%%% if the player is maximizing
+		Utility1 > Utility2, !.		%%% then greater is better.
+
+better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
+	:-	minimizing(M),				%%% if the player is minimizing,
+		Utility1 < Utility2, !.		%%% then lesser is better.
+	
+better(_,Mark,Column1,Utility1,Column2,Utility2,Column,Utility) 
+	:-	Utility1 == Utility2,		%%% if moves have equal utility,
+		random_between(1,10,R),		%%% then pick one of them at random
+		better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column,Utility), !.
+
+better(_,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2). 
+									%%% otherwise, second move is better
+	
+%.......................................
+% better2 : A adapter !
+%.......................................
+% randomly selects among two columns of the same utility value
+%
+better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) :- R < 6, !.
+better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Output and display
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+output_players :-
+	nl, player(1, Who1),
+	write('Le joueur 1 est '),	%%% either human or computer1 or computer2
+	write(Who1), 
+	nl, player(2, Who2),
+	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
+	write(Who2), ! .
+
+ output_winner(Board) :- wins(Board,x), write('X gagne.'), !.
+ output_winner(Board) :- wins(Board,o), write('O gagne.'), !.
+ output_winner(Board) :- write('No winner: Draw').
+
+output_value(1,Square,Utility) 
+	:- nl, write('Column '), write(Square), write(', utility: '), write(Utility), !.
+output_value(Depth,Square,Utility).
