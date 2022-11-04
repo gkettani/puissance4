@@ -22,7 +22,7 @@ maximizing('X').
 minimizing('O').	
 % The player playing o is always trying to minimize board position score
 
-maxDepth(4).
+maxDepth(3).
 
 %%%%%%%%%%%%%%%%%%
 %%% SHOW BOARD %%%
@@ -104,8 +104,8 @@ human_playing(M) :-
 human_playing(_) :- nl, write('Veuillez taper X ou O.'), set_players(1).
  
 play(Player1) 
-	:- 	board(Board), show(Board), 
-			not(game_over(Player1, Board)), 
+	:- 	board(Board), show(Board), !,
+			not(game_over(Player1, Board)),
 				make_move(Player1, Board), !,
 					next_player(Player1,Player2), play(Player2).
 
@@ -256,9 +256,9 @@ top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
 %.......................................
 % It computes the value of a given board position
 % 
-score(Board, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - div(Nb, 2) + 1, !.
-score(Board, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb, 2) + 1 - 22 , !.
-score(_, 0).
+score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - div(Nb+Depth, 2) + 1, !.
+score(Board, Depth, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb+Depth, 2) + 1 - 22 , !.
+score(_,_,0).
 
 %.......................................
 % minimax : A adapter !
@@ -292,7 +292,7 @@ minimax(Depth,Board,Mark,Column,Score) :-
 % If there are no more available moves, then the minimax value is 
 % the score of the given board position 
  
-minimax(_,Board,_,_,Score) :- score(Board, Score).
+minimax(Depth,Board,_,_,Score) :- score(Board, Depth, Score).
 
 %.......................................
 % best
@@ -365,8 +365,8 @@ output_players :-
 	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
 	write(Who2), nl, ! .
 
- output_winner(Board) :- wins(Board,x), write('X gagne.'), !.
- output_winner(Board) :- wins(Board,o), write('O gagne.'), !.
+ output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
+ output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
  output_winner(Board) :- write('No winner: Draw').
 
 output_value(1,Column,Score) 
