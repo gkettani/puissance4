@@ -278,6 +278,64 @@ minimax(_,[['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-']],_,Column,_) 
 	:- random_between(0,6,Column), !.
 
+
+
+/*
+	Implémentation de l'algorithme minimax
+	Appel de l'algorithme : minimax(EtatDuJeu, ProfondeurLimite, JoueurActuel)
+
+	minimax(EtatDuJeu, ProfondeurLimite, JoueurActuel)
+		Si ProfondeurLimite est défini à 0 ou si on est sur un noeud feuille
+		Alors retourner la valeur de l'évaluation du jeu
+
+		Si le joueur est celui à maximiser
+		Alors
+			Définir la valeur de base à -infini
+			Pour chaque Noeud enfant (possible moves)
+				valeur = maximum(valeur, minimax(NoeudEnfant, ProfondeurLimite - 1, JoueurSuivant))
+		Sinon // Le joueur est celui à minimiser
+			Définir la valeur de base à +infini
+			Pour chaque Noeud enfant (possible moves)
+				valeur = minimum(valeur, minimax(NoeudEnfant, ProfondeurLimite - 1, JoueurSuivant))
+		Return valeur
+
+
+
+		minimax(Board, Depth, Player, Move, Eval) :-
+			Depth == MaxDepth,
+			evaluate(Board, Player, Eval).
+			// TODO - Remonter la valeur donnée par evaluate
+
+		minimax(Board, Depth, Player, Move, Eval) :-
+			playerMark(Player, Mark),
+			move(Board, Move, Mark, NewBoard),
+
+			// TODO - trouver un moyen de jouer un coup
+			possibleMoves(NewBoard, [FirstMove|Moves]),
+			appliquer(FirstMove),
+			minimax(Depth-1),
+			minimax(Depth, Moves)
+
+			// TODO - Faire un minimax qui descend et un autre qui reste sur la meme profondeur
+
+			nextPlayer(Player, NextPlayer),
+			NextDepth is Depth - 1,
+			minimax(Board, NextDepth, NextPlayer, Move, Eval),
+
+			// TODO - récupérer la valeur max des noeuds de la profondeur NextDepth
+			// TODO - récupérer la valeur min des noeuds de la profondeur NextDepth
+
+			// On peut refactoriser en un seul prédicat minimax et retrouver la séparation entre les joueurs dans le choix du meilleur coup
+
+
+
+			Problèmes identifiés :
+									Remonter les valeurs et les sélectionner
+									Appliquer un coup (non définitif sur le board pour changer l'état du jeu et pouvoir explorer correctement l'arbre des possibilités)
+*/
+
+
+
 minimax(Depth,Board,Mark,Column,Utility) :-
  maxDepth(D), Depth<D,
  Depth2 is Depth+1,
@@ -326,11 +384,11 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Utility)
 % if both moves have the same utility value, then one is chosen at random. 
 %
 better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
-	:-	maximizing(M),				%%% if the player is maximizing
+	:-	maximizing(Mark),			%%% if the player is maximizing
 		Utility1 > Utility2, !.		%%% then greater is better.
 
 better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
-	:-	minimizing(M),				%%% if the player is minimizing,
+	:-	minimizing(Mark),			%%% if the player is minimizing,
 		Utility1 < Utility2, !.		%%% then lesser is better.
 	
 better(_,Mark,Column1,Utility1,Column2,Utility2,Column,Utility) 
