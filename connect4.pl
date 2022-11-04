@@ -1,5 +1,6 @@
 :-dynamic board/1.
 :-dynamic player/2.
+:-dynamic nbTokens/1.
 
 %%%%%%%%%%%%%%%%%%
 %%%%% PARAMS %%%%%
@@ -17,11 +18,12 @@ opponent_mark(1,'O'). 	%%% the inverse mark of the given player
 opponent_mark(2,'X'). 
 
 maximizing('X').	
-% The player playing x is always trying to maximize board position utility
+% The player playing x is always trying to maximize board position score
 minimizing('O').	
-% The player playing o is always trying to minimize board position utility
+% The player playing o is always trying to minimize board position score
 
 maxDepth(4).
+
 %%%%%%%%%%%%%%%%%%
 %%% SHOW BOARD %%%
 %%%%%%%%%%%%%%%%%%
@@ -57,14 +59,15 @@ welcome :- initialize, nl, nl, write('Début du jeu Puissance 4'),
 			read_players, output_players.
 
 initialize :-	%%% random seed may use time to initialize random number generator
-				retractall(player(_,_)), retractall(board(_)),	
+				retractall(player(_,_)), retractall(board(_)), retractall(nbTokens(_)),	
 				asserta(board([['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
-                               ['-','-','-','-','-','-']])). 
+                               ['-','-','-','-','-','-']])),
+				asserta(nbTokens(0)). 
 				%%% create an empty board
 
 goodbye :- 	board(Board), nl, nl, write('Game over: '), 
@@ -73,7 +76,7 @@ goodbye :- 	board(Board), nl, nl, write('Game over: '),
 						read_play_again(V), !, 
 							(V == 'Y' ; V == 'y'), !, jouer.
 
-read_play_again(V) :- nl, nl, write('Play again (Y/N)? '), read(V),
+read_play_again(V) :- nl, nl, write('Play again (Y/N)? '), get_char(V),
 						(V == 'y' ; V == 'Y' ; V == 'n' ; V == 'N'), !.
 read_play_again(V) :- nl, nl, write('Please enter Y or N.'),
 						read_play_again(V).
@@ -83,8 +86,8 @@ read_players
 
 set_players(0) :- asserta(player(1,computer1)), asserta(player(2,computer2)), !.
 
-set_players(1) :- nl, write('Voulez vous jouer X ou O (X commence en premier)? '),
-					read(M), human_playing(M), !.
+set_players(1) :- nl, write('Voulez vous jouer X ou O ? '),
+					get_char(M), human_playing(M), !.
 
 set_players(2) :- asserta(player(1,human)), asserta(player(2,human)), !.
  
@@ -169,7 +172,7 @@ isFull(T):- \+ (append(_,[C|_],T), append(_,['-'|_],C)).
 % readColumn
 %.......................................
 %reads a column
-readColumn(C):- nl, write(' , veuillez choisir une colonne : '),
+readColumn(C):- write(' , veuillez choisir une colonne : '),
 		repeat,
 		get_char(L),
 		associateColumn(L,C),
@@ -200,8 +203,9 @@ col(6).
 % 
 make_move(Player, Board1) 
 	:- 	player(Player, Type_Joueur), 
-			make_move2(Type_Joueur, Player, Board1, Board2), 
-				retract(board(_)), asserta(board(Board2)).
+			make_move2(Type_Joueur, Player, Board1, Board2),
+				nbTokens(Nb), NewNb is Nb + 1, retractall(nbTokens(_)), asserta(nbTokens(NewNb)),
+					retract(board(_)), asserta(board(Board2)).
 
 make_move2(human, Player, Board1, Board2) 
 	:-	nl, nl, write('C\'est au tour du joueur '), write(Player), readColumn(Column), !
@@ -212,7 +216,7 @@ make_move2(human, Player, Board1, Board2)
 			make_move2(human,Player,Board1,Board2).
 
 % A move computed thanks to minimax is made of values for the 3 variables 
-% Mark, Column and Utility
+% Mark, Column and Score
 
 make_move2(computer1, Player, Board1, Board2) 
 	:-	nl, nl, write('Computer1 est entrain de réflechir ...'), nl,
@@ -220,7 +224,7 @@ make_move2(computer1, Player, Board1, Board2)
 				minimax(0, Board1, Mark, Column, _),
 					move(Board1,Column,Mark,Board2), !,
 		nl, nl, write('Computer1 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
-			write(L), write('.').
+			write(L), write('.'), nl.
 
 make_move2(computer2, Player, Board1, Board2) 
 	:-	nl, nl, write('Computer2 est entrain de réflechir ...'), nl,
@@ -228,7 +232,7 @@ make_move2(computer2, Player, Board1, Board2)
 				repeat, random_between(0,6,Column),
 					move(Board1,Column,Mark,Board2), !,
 		nl, write('Computer2 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
-			write(L), write('.').
+			write(L), write('.'), nl.
 
 %.......................................
 % possible_moves : A adapter !
@@ -248,13 +252,13 @@ top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
 
 		
 %.......................................
-% utility
+% score
 %.......................................
 % It computes the value of a given board position
 % 
-utility(Board,1) :- wins(Board,'X'), !.
-utility(Board,-1) :- wins(Board,'O'), !.
-utility(_,0).
+score(Board, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - div(Nb, 2) + 1, !.
+score(Board, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb, 2) + 1 - 22 , !.
+score(_, 0).
 
 %.......................................
 % minimax : A adapter !
@@ -278,76 +282,76 @@ minimax(_,[['-','-','-','-','-','-'],
                 ['-','-','-','-','-','-']],_,Column,_) 
 	:- random_between(0,6,Column), !.
 
-minimax(Depth,Board,Mark,Column,Utility) :-
+minimax(Depth,Board,Mark,Column,Score) :-
  maxDepth(D), Depth<D,
  Depth2 is Depth+1,
  possible_moves(Board,List), !,		%%% get the list of possible moves
-	best(Depth2,Board,Mark,List,Column,Utility), !.	
+	best(Depth2,Board,Mark,List,Column,Score), !.	
 					%%% recursively determine the best available move
 
 % If there are no more available moves, then the minimax value is 
-% the utility of the given board position 
+% the score of the given board position 
  
-minimax(_,Board,_,_,Utility) :- utility(Board,Utility).
+minimax(_,Board,_,_,Score) :- score(Board, Score).
 
 %.......................................
-% best : A adapter !
+% best
 %.......................................
 % determines the best move in a given list of moves by 
 % recursively calling minimax
 % 
 % if there is only one move left in the list... 
 
-best(Depth,Board,Mark,[Column1],Column1,Utility) 
+best(Depth,Board,Mark,[Column1],Column1,Score) 
 	:-	move(Board,Column1,Mark,Board2),	%%% apply that move to the board,
 			inverse_mark(Mark,Mark2), !,
-			%%% then recursively search for the utility of that move.
-				minimax(Depth,Board2,Mark2,_,Utility), !,	 
-				output_value(Depth,Column1,Utility), !.
+			%%% then recursively search for the score of that move.
+				minimax(Depth,Board2,Mark2,_,Score), !,	 
+				output_value(Depth,Column1,Score), !.
 
 % if there is more than one move in the list... 
 
-best(Depth,Board,Mark,[Column1|Other_Moves],Column,Utility) 
+best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score) 
 	:-	move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
 			inverse_mark(Mark,Mark2), !,
-				minimax(Depth,Board2,Mark2,_,Utility1),	
-			%%% recursively search for the utility value of that move
+				minimax(Depth,Board2,Mark2,_,Score1),	
+			%%% recursively search for the score value of that move
 			%%% and determine the best move of the remaining moves
-				best(Depth,Board,Mark,Other_Moves,Column2,Utility2),	
-				output_value(Depth,Column1,Utility1),
-			better(Depth,Mark,Column1,Utility1,Column2,Utility2,Column,Utility). 	
-	%%% choose the better of the two moves based on their utility values
+				best(Depth,Board,Mark,Other_Moves,Column2,Score2),	
+				output_value(Depth,Column1,Score1),
+			better(Depth,Mark,Column1,Score1,Column2,Score2,Column,Score). 	
+	%%% choose the better of the two moves based on their score values
 
 %.......................................
 % better : A adapter !
 %.......................................
-% returns the better of two moves based on their utility values.
+% returns the better of two moves based on their score values.
 %
-% if both moves have the same utility value, then one is chosen at random. 
+% if both moves have the same score value, then one is chosen at random. 
 %
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
-	:-	maximizing(M),				%%% if the player is maximizing
-		Utility1 > Utility2, !.		%%% then greater is better.
+better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
+	:-	maximizing(Mark),				%%% if the player is maximizing
+		Score1 > Score2, !.		%%% then greater is better.
 
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
-	:-	minimizing(M),				%%% if the player is minimizing,
-		Utility1 < Utility2, !.		%%% then lesser is better.
+better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
+	:-	minimizing(Mark),				%%% if the player is minimizing,
+		Score1 < Score2, !.		%%% then lesser is better.
 	
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column,Utility) 
-	:-	Utility1 == Utility2,		%%% if moves have equal utility,
+better(_,Mark,Column1,Score1,Column2,Score2,Column,Score) 
+	:-	Score1 == Score2,		%%% if moves have equal score,
 		random_between(1,10,R),		%%% then pick one of them at random
-		better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column,Utility), !.
+		better2(_,R,Mark,Column1,Score1,Column2,Score2,Column,Score), !.
 
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2). 
+better(_,Mark,Column1,Score1,Column2,Score2,Column2,Score2). 
 									%%% otherwise, second move is better
 	
 %.......................................
-% better2 : A adapter !
+% better2
 %.......................................
-% randomly selects among two columns of the same utility value
+% randomly selects among two columns of the same score value
 %
-better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) :- R < 6, !.
-better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2).
+better2(_,R,Mark,Column1,Score1,Column2,Score2,Column1,Score1) :- R < 6, !.
+better2(_,R,Mark,Column1,Score1,Column2,Score2,Column2,Score2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Output and display
@@ -359,12 +363,14 @@ output_players :-
 	write(Who1), 
 	nl, player(2, Who2),
 	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
-	write(Who2), ! .
+	write(Who2), nl, ! .
 
  output_winner(Board) :- wins(Board,x), write('X gagne.'), !.
  output_winner(Board) :- wins(Board,o), write('O gagne.'), !.
  output_winner(Board) :- write('No winner: Draw').
 
-output_value(1,Square,Utility) 
-	:- nl, write('Column '), write(Square), write(', utility: '), write(Utility), !.
-output_value(Depth,Square,Utility).
+output_value(1,Column,Score) 
+	:- nl, write('Column '), write(Column), write(', score: '), write(Score), !.
+output_value(Depth,Column,Score).
+
+output_token :- nl, write('nbTokens '), nbTokens(Nb), write(Nb), nl, !.
