@@ -101,7 +101,7 @@ human_playing(M) :-
 human_playing(_) :- nl, write('Veuillez taper X ou O.'), set_players(1).
  
 play(Player1) 
-	:- 	board(Board), show(Board), 
+	:- 	board(Board), show(Board), !, 
 			not(game_over(Player1, Board)), 
 				make_move(Player1, Board), !,
 					next_player(Player1,Player2), play(Player2).
@@ -306,13 +306,13 @@ minimax(_,[['-','-','-','-','-','-'],
 			evaluate(Board, Player, Eval).
 			// TODO - Remonter la valeur donnée par evaluate
 
-		minimax(Board, Depth, Player, Move, Eval) :-
+		minimax(Board, Depth, Player, [Move|MoveList], Eval) :-
 			playerMark(Player, Mark),
 			move(Board, Move, Mark, NewBoard),
 
 			// TODO - trouver un moyen de jouer un coup
 			possibleMoves(NewBoard, [FirstMove|Moves]),
-			appliquer(FirstMove),
+			move(Board, FirstMove, Player, NewBoard),
 			minimax(Depth-1),
 			minimax(Depth, Moves)
 
@@ -322,18 +322,13 @@ minimax(_,[['-','-','-','-','-','-'],
 			NextDepth is Depth - 1,
 			minimax(Board, NextDepth, NextPlayer, Move, Eval),
 
-			// TODO - récupérer la valeur max des noeuds de la profondeur NextDepth
-			// TODO - récupérer la valeur min des noeuds de la profondeur NextDepth
-
-			// On peut refactoriser en un seul prédicat minimax et retrouver la séparation entre les joueurs dans le choix du meilleur coup
+			better(Depth,Player,Move1,Score1,Move2,Score2,ResMove,ResScore)
 
 
 
 			Problèmes identifiés :
 									Remonter les valeurs et les sélectionner
-									Appliquer un coup (non définitif sur le board pour changer l'état du jeu et pouvoir explorer correctement l'arbre des possibilités)
 */
-
 
 
 minimax(Depth,Board,Mark,Column,Utility) :-
@@ -368,7 +363,7 @@ best(Depth,Board,Mark,[Column1],Column1,Utility)
 best(Depth,Board,Mark,[Column1|Other_Moves],Column,Utility) 
 	:-	move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
 			inverse_mark(Mark,Mark2), !,
-				minimax(Depth,Board2,Mark2,_,Utility1),	
+				minimax(Depth,Board2,Mark2,_,Utility1),
 			%%% recursively search for the utility value of that move
 			%%% and determine the best move of the remaining moves
 				best(Depth,Board,Mark,Other_Moves,Column2,Utility2),	
@@ -383,11 +378,11 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Utility)
 %
 % if both moves have the same utility value, then one is chosen at random. 
 %
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
+better(_,Mark,Column1,Utility1,_,Utility2,Column1,Utility1) 
 	:-	maximizing(Mark),			%%% if the player is maximizing
 		Utility1 > Utility2, !.		%%% then greater is better.
 
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) 
+better(_,Mark,Column1,Utility1,_,Utility2,Column1,Utility1) 
 	:-	minimizing(Mark),			%%% if the player is minimizing,
 		Utility1 < Utility2, !.		%%% then lesser is better.
 	
@@ -396,7 +391,7 @@ better(_,Mark,Column1,Utility1,Column2,Utility2,Column,Utility)
 		random_between(1,10,R),		%%% then pick one of them at random
 		better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column,Utility), !.
 
-better(_,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2). 
+better(_,_,_,_,Column2,Utility2,Column2,Utility2). 
 									%%% otherwise, second move is better
 	
 %.......................................
@@ -404,8 +399,8 @@ better(_,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2).
 %.......................................
 % randomly selects among two columns of the same utility value
 %
-better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column1,Utility1) :- R < 6, !.
-better2(_,R,Mark,Column1,Utility1,Column2,Utility2,Column2,Utility2).
+better2(_,R,_,Column1,Utility1,_,_,Column1,Utility1) :- R < 6, !.
+better2(_,_,_,_,_,Column2,Utility2,Column2,Utility2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Output and display
@@ -419,10 +414,10 @@ output_players :-
 	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
 	write(Who2), ! .
 
- output_winner(Board) :- wins(Board,x), write('X gagne.'), !.
- output_winner(Board) :- wins(Board,o), write('O gagne.'), !.
- output_winner(Board) :- write('No winner: Draw').
+ output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
+ output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
+ output_winner(_) :- write('No winner: Draw').
 
 output_value(1,Square,Utility) 
 	:- nl, write('Column '), write(Square), write(', utility: '), write(Utility), !.
-output_value(Depth,Square,Utility).
+output_value(_,_,_).
