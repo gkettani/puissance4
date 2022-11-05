@@ -22,7 +22,7 @@ maximizing('X').
 minimizing('O').	
 % The player playing o is always trying to minimize board position score
 
-maxDepth(3).
+maxDepth(5).
 
 %%%%%%%%%%%%%%%%%%
 %%% SHOW BOARD %%%
@@ -235,11 +235,10 @@ make_move2(computer2, Player, Board1, Board2)
 			write(L), write('.'), nl.
 
 %.......................................
-% possible_moves : A adapter !
+% possible_moves
 %.......................................
 % It retrieves a list of possible moves (empty columns) on a board.
 % 
-
 possible_moves(Board,List) 
 	:-	not(wins(Board,'X')),	%%% if either player already won, 
 							%%% then there are no available moves
@@ -256,12 +255,12 @@ top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
 %.......................................
 % It computes the value of a given board position
 % 
-score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - div(Nb+Depth, 2) + 1, !.
+score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1), !.
 score(Board, Depth, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb+Depth, 2) + 1 - 22 , !.
 score(_,_,0).
 
 %.......................................
-% minimax : A adapter !
+% minimax
 %.......................................
 % The minimax algorithm always assumes an optimal opponent.
 % For tic-tac-toe, optimal play will always result in a draw, 
@@ -274,12 +273,12 @@ score(_,_,0).
 % by simply selecting a random column. 
  
 minimax(_,[['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-'],
-                ['-','-','-','-','-','-']],_,Column,_) 
+			['-','-','-','-','-','-'],
+			['-','-','-','-','-','-'],
+			['-','-','-','-','-','-'],
+			['-','-','-','-','-','-'],
+			['-','-','-','-','-','-'],
+			['-','-','-','-','-','-']],_,Column,_)
 	:- random_between(0,6,Column), !.
 
 minimax(Depth,Board,Mark,Column,Score) :-
@@ -315,15 +314,31 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score)
 	:-	move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
 			inverse_mark(Mark,Mark2), !,
 				minimax(Depth,Board2,Mark2,_,Score1),	
-			%%% recursively search for the score value of that move
-			%%% and determine the best move of the remaining moves
-				best(Depth,Board,Mark,Other_Moves,Column2,Score2),	
+				%%% recursively search for the score value of that move
+			% 	(
+			% 		maximizing(Mark) ->
+			% 		Alpha0 is max(Alpha, Score1),
+			% 		Beta0 is Beta
+			% 	;	
+			% 		Alpha0 is Alpha,
+			% 		Beta0 is min(Beta, Score1)
+			% 	), 
+			% 	(	
+			% 		not(Beta0 =< Alpha0) ->
+			% 		%%% determine the best move of the remaining moves
+			% 		best(Depth,Board,Mark,Other_Moves,Column2,Score2,Alpha0,Beta0)	
+			% 	;	%%% if Beta <= Alpha we don't explore remaining moves 
+			% 		Column2 is Column1,
+			% 		Score2 is Score1
+			% 	),
+				%%% and determine the best move of the remaining moves
+				best(Depth,Board,Mark,Other_Moves,Column2,Score2),
 				output_value(Depth,Column1,Score1),
-			better(Depth,Mark,Column1,Score1,Column2,Score2,Column,Score). 	
-	%%% choose the better of the two moves based on their score values
+				%%% choose the better of the two moves based on their score values
+				better(Depth,Mark,Column1,Score1,Column2,Score2,Column,Score).
 
 %.......................................
-% better : A adapter !
+% better
 %.......................................
 % returns the better of two moves based on their score values.
 %
