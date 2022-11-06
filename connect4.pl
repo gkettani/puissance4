@@ -82,7 +82,7 @@ read_play_again(V) :- nl, nl, write('Please enter Y or N.'),
 						read_play_again(V).
 
 read_players 
-	:- nl, nl, write('Number of human players? '), read(N), set_players(N).
+	:- nl, nl, write('Nombre de joueurs humains? '), read(N), set_players(N).
 
 set_players(0) :- asserta(player(1,computer1)), asserta(player(2,computer2)), !.
 
@@ -255,9 +255,72 @@ top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
 %.......................................
 % It computes the value of a given board position
 % 
-score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1), !.
-score(Board, Depth, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb+Depth, 2) + 1 - 22 , !.
+score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1), !. % We add 1 because when X plays at first the number of X tokens is odd
+score(Board, Depth, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb+Depth, 2) - 22 , !. 
+score(Board, Depth, S) :- three_in_a_row(Board,'X', H), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1 + H), !.
+score(Board, Depth, S) :- three_in_a_row(Board,'O', H), nbTokens(Nb), S is div(Nb+Depth, 2) + H - 22 , !.
 score(_,_,0).
+
+%three_in_a_row(T, X, H) is satisfied if the player with Mark X has 3 connected X in a row in board T
+%check if there's a column in T with 3 connected pieces of player X
+three_in_a_row(T, X, H):- append(_, [C|_], T), % check if there's a column...
+	           append(_,['-',X,X,X|_],C), % ...which has 3 connected pieces of player X
+			   H is 1.
+%check if there's a row in T with 3 connected pieces of player X
+three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
+		((
+			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,[X|_],C4),
+			length(I1,M), length(I2,M), length(I3,M), length(I4,M), %...and every piece is in the same height
+			H is 6 - M
+		);(
+			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,M), length(I2,M), length(I3,M), length(I4,M), %...and every piece is in the same height
+			H is 6 - M
+		)).
+%check if there's a diagonal (type \) in T with 3 connected pieces of player X
+three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
+		((   
+			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,[X|_],C4),
+			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+			M2 is M1+1, M3 is M2+1, M4 is M3+1, %...and every piece is within the same diagonal \
+			H is 6 - M1
+		);(
+			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+			M2 is M1+1, M3 is M2+1, M4 is M3+1, %...and every piece is within the same diagonal \
+			H is 6 - M4
+		)).
+%check if there's a diagonal (type /) in T with 3 connected pieces of player X
+three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
+		((   
+			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,[X|_],C4),
+			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+			M2 is M1-1, M3 is M2-1, M4 is M3-1, %...and every piece is within the same diagonal /
+			H is 6 - M1
+		);(
+			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
+			append(I2,[X|_],C2),
+			append(I3,[X|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
+			M2 is M1-1, M3 is M2-1, M4 is M3-1, %...and every piece is within the same diagonal /
+			H is 6 - M4
+		)).
 
 %.......................................
 % minimax
