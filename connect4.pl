@@ -1,6 +1,8 @@
 :-dynamic board/1.
 :-dynamic player/2.
 :-dynamic nbTokens/1.
+:-dynamic maximizing/1.
+:-dynamic minimizing/1.
 
 %%%%%%%%%%%%%%%%%%
 %%%%% PARAMS %%%%%
@@ -16,11 +18,6 @@ player_mark(2,'O').
  
 opponent_mark(1,'O'). 	%%% the inverse mark of the given player
 opponent_mark(2,'X'). 
-
-maximizing('X').	
-% The player playing x is always trying to maximize board position score
-minimizing('O').	
-% The player playing o is always trying to minimize board position score
 
 maxDepth(5).
 
@@ -172,7 +169,7 @@ isFull(T):- \+ (append(_,[C|_],T), append(_,['-'|_],C)).
 % readColumn
 %.......................................
 %reads a column
-readColumn(C):- write(' , veuillez choisir une colonne : '),
+readColumn(C):- writeln('Veuillez choisir une colonne entre A et G : '),
 		repeat,
 		get_char(L),
 		associateColumn(L,C),
@@ -208,11 +205,11 @@ make_move(Player, Board1)
 					retract(board(_)), asserta(board(Board2)).
 
 make_move2(human, Player, Board1, Board2) 
-	:-	nl, nl, write('C\'est au tour du joueur '), write(Player), readColumn(Column), !
+	:-	nl, nl, write('C\'est au tour du joueur '), write(Player), nl, readColumn(Column)
     			, player_mark(Player, Mark), move(Board1,Column,Mark,Board2), !.
 				
 make_move2(human, Player, Board1, Board2) 
-	:-	nl, nl, write('Veuillez choisir une lettre entre A et G.'),
+	:-	nl, nl, write('Veuillez choisir une colonne valide.'),
 			make_move2(human,Player,Board1,Board2).
 
 % A move computed thanks to minimax is made of values for the 3 variables 
@@ -221,8 +218,10 @@ make_move2(human, Player, Board1, Board2)
 make_move2(computer1, Player, Board1, Board2) 
 	:-	nl, nl, write('Computer1 est entrain de réflechir ...'), nl,
 			player_mark(Player, Mark),
-				minimax(0, Board1, Mark, Column, _),
-					move(Board1,Column,Mark,Board2), !,
+				retractall(maximizing(_)), asserta(maximizing(Mark)),
+				retractall(minimizing(_)), inverse_mark(Mark, Opponent),asserta(minimizing(Opponent)),
+					minimax(0, Board1, Mark, Column, _),
+						move(Board1,Column,Mark,Board2), !,
 		nl, nl, write('Computer1 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
 			write(L), write('.'), nl.
 
@@ -255,10 +254,10 @@ top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
 %.......................................
 % It computes the value of a given board position
 % 
-score(Board, Depth, S) :- wins(Board,'X'), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1), !. % We add 1 because when X plays at first the number of X tokens is odd
-score(Board, Depth, S) :- wins(Board,'O'), nbTokens(Nb), S is div(Nb+Depth, 2) - 22 , !. 
-score(Board, Depth, S) :- three_in_a_row(Board,'X', H), nbTokens(Nb), S is 22 - (div(Nb+Depth, 2) + 1 + H), !.
-score(Board, Depth, S) :- three_in_a_row(Board,'O', H), nbTokens(Nb), S is div(Nb+Depth, 2) + H - 22 , !.
+score(Board, Depth, S) :- maximizing(M), wins(Board, M), nbTokens(Nb), S is 100 - div(Nb+Depth+1, 2), !. % We add 1 because when X plays at first the number of X tokens is odd
+score(Board, Depth, S) :- minimizing(M), wins(Board, M), nbTokens(Nb), S is div(Nb+Depth+1, 2) - 100 , !. 
+score(Board, Depth, S) :- maximizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is 28 - (div(Nb+Depth+1, 2) + H), !.
+score(Board, Depth, S) :- minimizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is div(Nb+Depth+1, 2) + H - 28 , !.
 score(_,_,0).
 
 %three_in_a_row(T, X, H) is satisfied if the player with Mark X has 3 connected X in a row in board T
@@ -378,22 +377,6 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score)
 			inverse_mark(Mark,Mark2), !,
 				minimax(Depth,Board2,Mark2,_,Score1),	
 				%%% recursively search for the score value of that move
-			% 	(
-			% 		maximizing(Mark) ->
-			% 		Alpha0 is max(Alpha, Score1),
-			% 		Beta0 is Beta
-			% 	;	
-			% 		Alpha0 is Alpha,
-			% 		Beta0 is min(Beta, Score1)
-			% 	), 
-			% 	(	
-			% 		not(Beta0 =< Alpha0) ->
-			% 		%%% determine the best move of the remaining moves
-			% 		best(Depth,Board,Mark,Other_Moves,Column2,Score2,Alpha0,Beta0)	
-			% 	;	%%% if Beta <= Alpha we don't explore remaining moves 
-			% 		Column2 is Column1,
-			% 		Score2 is Score1
-			% 	),
 				%%% and determine the best move of the remaining moves
 				best(Depth,Board,Mark,Other_Moves,Column2,Score2),
 				output_value(Depth,Column1,Score1),
@@ -441,7 +424,7 @@ output_players :-
 	write(Who1), 
 	nl, player(2, Who2),
 	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
-	write(Who2), nl, ! .
+	write(Who2), nl, nl, ! .
 
  output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
  output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
