@@ -1,6 +1,9 @@
 :-dynamic board/1.
 :-dynamic player/2.
 :-dynamic nbTokens/1.
+:-dynamic alpha/1.
+:-dynamic beta/1.
+:-dynamic noeudsParcourus/1.
 
 %%%%%%%%%%%%%%%%%%
 %%%%% PARAMS %%%%%
@@ -60,6 +63,7 @@ welcome :- initialize, nl, nl, write('Début du jeu Puissance 4'),
 
 initialize :-	%%% random seed may use time to initialize random number generator
 				retractall(player(_,_)), retractall(board(_)), retractall(nbTokens(_)),	
+                retractall(alpha(_)), retractall(beta(_)),
 				asserta(board([['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
@@ -67,7 +71,7 @@ initialize :-	%%% random seed may use time to initialize random number generator
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-'],
                                ['-','-','-','-','-','-']])),
-				asserta(nbTokens(0)). 
+				asserta(nbTokens(0)), asserta(alpha(-30)), asserta(beta(30)), asserta(noeudsParcourus(0)). 
 				%%% create an empty board
 
 goodbye :- 	board(Board), nl, nl, write('Game over: '), 
@@ -107,7 +111,7 @@ play(Player1)
 	:- 	board(Board), show(Board), !,
 			not(game_over(Player1, Board)),
 				make_move(Player1, Board), !,
-					next_player(Player1,Player2), play(Player2).
+					next_player(Player1,Player2), output_noeudsParcourus, play(Player2).
 
 %.......................................
 % wins
@@ -366,16 +370,17 @@ minimax(Depth,Board,_,_,Score) :- score(Board, Depth, Score).
 
 best(Depth,Board,Mark,[Column1],Column1,Score) 
 	:-	move(Board,Column1,Mark,Board2),	%%% apply that move to the board,
-			inverse_mark(Mark,Mark2), !,
+			    inverse_mark(Mark,Mark2), !,
 			%%% then recursively search for the score of that move.
-				minimax(Depth,Board2,Mark2,_,Score), !,	 
-				output_value(Depth,Column1,Score), !.
+				    minimax(Depth,Board2,Mark2,_,Score), !,	 
+				    output_value(Depth,Column1,Score), !.
 
 % if there is more than one move in the list... 
 
 best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score) 
-	:-	move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
-			inverse_mark(Mark,Mark2), !,
+	:-	alpha(A), beta(B), A<B, !,
+            move(Board,Column1,Mark,Board2),	%%% apply the first move (in the list)
+            inverse_mark(Mark,Mark2), !,
 				minimax(Depth,Board2,Mark2,_,Score1),	
 				%%% recursively search for the score value of that move
 			% 	(
@@ -409,16 +414,23 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score)
 %
 better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
 	:-	maximizing(Mark),				%%% if the player is maximizing
-		Score1 > Score2, !.		%%% then greater is better.
+		Score1 > Score2, 
+        asserta(alpha(Score1)), 
+        noeudsParcourus(Np), NewNp is Np + 1, 
+        retractall(noeudsParcourus(_)), asserta(noeudsParcourus(NewNp)), !.		%%% then greater is better.
 
 better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
 	:-	minimizing(Mark),				%%% if the player is minimizing,
-		Score1 < Score2, !.		%%% then lesser is better.
+		Score1 < Score2, 
+        asserta(beta(Score1)), noeudsParcourus(Np), NewNp is Np + 1, 
+        retractall(noeudsParcourus(_)), asserta(noeudsParcourus(NewNp)), !.		%%% then lesser is better.
 	
 better(_,Mark,Column1,Score1,Column2,Score2,Column,Score) 
 	:-	Score1 == Score2,		%%% if moves have equal score,
 		random_between(1,10,R),		%%% then pick one of them at random
-		better2(_,R,Mark,Column1,Score1,Column2,Score2,Column,Score), !.
+		better2(_,R,Mark,Column1,Score1,Column2,Score2,Column,Score), 
+        noeudsParcourus(Np), NewNp is Np + 1, 
+        retractall(noeudsParcourus(_)), asserta(noeudsParcourus(NewNp)), !.
 
 better(_,Mark,Column1,Score1,Column2,Score2,Column2,Score2). 
 									%%% otherwise, second move is better
@@ -443,8 +455,8 @@ output_players :-
 	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
 	write(Who2), nl, ! .
 
- output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
- output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
+ output_winner(Board) :- wins(Board,'X'), write('X gagne.'), output_noeudsParcourus, !.
+ output_winner(Board) :- wins(Board,'O'), write('O gagne.'), output_noeudsParcourus, !.
  output_winner(Board) :- write('No winner: Draw').
 
 output_value(1,Column,Score) 
@@ -452,3 +464,5 @@ output_value(1,Column,Score)
 output_value(Depth,Column,Score).
 
 output_token :- nl, write('nbTokens '), nbTokens(Nb), write(Nb), nl, !.
+
+output_noeudsParcourus :- nl, write('nbNoeudsParcourus '), noeudsParcourus(Np), write(Np), nl, !.
