@@ -83,7 +83,7 @@ read_players
 
 set_players(0) :- asserta(player(1,computer1)), asserta(player(2,computer2)), !.
 
-set_players(1) :- nl, write('Voulez vous jouer X ou O ? '),
+set_players(1) :- nl, write('Voulez vous jouer X ou O ? (X joue avec minimax, O avec greedy)'),
 					get_char(M), human_playing(M), !.
 
 set_players(2) :- asserta(player(1,human)), asserta(player(2,human)), !.
@@ -92,11 +92,11 @@ set_players(_) :- nl, write('Veuillez taper 0, 1, ou 2.'), read_players.
 
 human_playing(M) :-
 	(M == 'x' ; M == 'X'), 
-		asserta(player(1,human)), asserta(player(2,computer1)), !.
+		asserta(player(1,human)), asserta(player(2,computer2)), !.
 
 human_playing(M) :-
 	(M == 'o' ; M == 'O'),
-		asserta(player(1,computer2)), asserta(player(2,human)), !.
+		asserta(player(1,computer1)), asserta(player(2,human)), !.
 
 human_playing(_) :- nl, write('Veuillez taper X ou O.'), set_players(1).
  
@@ -488,13 +488,25 @@ top(Board,Col,X,Y):-
 
 
 col_max(X,Y,COL1,_,RES,COL):-
- X >= Y,
+ X > Y,
  RES is X,
  COL is COL1,!.
 
-col_max(_,Y,_,COL2,RES,COL):-
- RES is Y,
- COL is COL2,!.
+col_max(X,Y,_,COL2,RES,COL):-
+	X < Y,
+ 	RES is Y,
+ 	COL is COL2,!.
+
+col_max(X,Y,COL1,COL2,RES,COL):-
+	random_between(1,2,R),
+	( R == 1 ->
+		RES is Y,
+ 		COL is COL2,!;
+	  R == 2 ->
+	  	RES is X,
+	  	COL is COL1,!
+	).
+	
 
 greedy(B,Mark,C):- 
  findall((Col,Bs), (col(Col), move(B,Col,Mark,Bs),wins(Bs,Mark)),[(C,_)|_]),!.
