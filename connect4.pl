@@ -96,7 +96,7 @@ human_playing(M) :-
 
 human_playing(M) :-
 	(M == 'o' ; M == 'O'),
-		asserta(player(1,computer1)), asserta(player(2,human)), !.
+		asserta(player(1,computer2)), asserta(player(2,human)), !.
 
 human_playing(_) :- nl, write('Veuillez taper X ou O.'), set_players(1).
  
@@ -228,7 +228,7 @@ make_move2(computer1, Player, Board1, Board2)
 make_move2(computer2, Player, Board1, Board2) 
 	:-	nl, nl, write('Computer2 est entrain de réflechir ...'), nl,
 			player_mark(Player, Mark),
-				repeat, random_between(0,6,Column),
+				greedy(Board1,Mark,Column),
 					move(Board1,Column,Mark,Board2), !,
 		nl, write('Computer2 place '), write(Mark), write(' dans la colonne '), associateChar(L,Column),
 			write(L), write('.'), nl.
@@ -390,11 +390,11 @@ best(Depth,Board,Mark,[Column1|Other_Moves],Column,Score)
 %
 % if both moves have the same score value, then one is chosen at random. 
 %
-better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
+better(_,Mark,Column1,Score1,_,Score2,Column1,Score1) 
 	:-	maximizing(Mark),				%%% if the player is maximizing
 		Score1 > Score2, !.		%%% then greater is better.
 
-better(_,Mark,Column1,Score1,Column2,Score2,Column1,Score1) 
+better(_,Mark,Column1,Score1,_,Score2,Column1,Score1) 
 	:-	minimizing(Mark),				%%% if the player is minimizing,
 		Score1 < Score2, !.		%%% then lesser is better.
 	
@@ -403,7 +403,7 @@ better(_,Mark,Column1,Score1,Column2,Score2,Column,Score)
 		random_between(1,10,R),		%%% then pick one of them at random
 		better2(_,R,Mark,Column1,Score1,Column2,Score2,Column,Score), !.
 
-better(_,Mark,Column1,Score1,Column2,Score2,Column2,Score2). 
+better(_,_,_,_,Column2,Score2,Column2,Score2). 
 									%%% otherwise, second move is better
 	
 %.......................................
@@ -411,8 +411,8 @@ better(_,Mark,Column1,Score1,Column2,Score2,Column2,Score2).
 %.......................................
 % randomly selects among two columns of the same score value
 %
-better2(_,R,Mark,Column1,Score1,Column2,Score2,Column1,Score1) :- R < 6, !.
-better2(_,R,Mark,Column1,Score1,Column2,Score2,Column2,Score2).
+better2(_,R,_,Column1,Score1,_,_,Column1,Score1) :- R < 6, !.
+better2(_,_,_,_,_,Column2,Score2,Column2,Score2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Output and display
@@ -428,10 +428,92 @@ output_players :-
 
  output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
  output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
- output_winner(Board) :- write('No winner: Draw').
+ output_winner(_) :- write('No winner: Draw').
 
 output_value(1,Column,Score) 
 	:- nl, write('Column '), write(Column), write(', score: '), write(Score), !.
-output_value(Depth,Column,Score).
+output_value(_,_,_).
 
 output_token :- nl, write('nbTokens '), nbTokens(Nb), write(Nb), nl, !.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  		Greedy 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+piece(Board,Col,Row,Res):-
+	append(I,[C|_],Board),
+	length(I,Col), 
+	append(L,[Res|_],C),
+	length(L,Row0),
+	Row is 5-Row0,!.
+
+
+
+traverse(B,C,R,IncC,IncR,Res):-
+	NewC is C + IncC,
+	NewR is R + IncR,
+	NewC > -1, NewR > -1,
+	NewC < 7, NewR < 6,
+	piece(B,C,R,C1),
+	piece(B,NewC,NewR,C2),
+	C1 == C2,
+	traverse(B,NewC,NewR,IncC,IncR,Res1),
+	Res is Res1 + 1,!.
+traverse(_,_,_,_,_,Res):-
+ Res is 1.
+
+get_max(B,X,Y,RES):-
+ traverse(B,X,Y,1,0,R11),traverse(B,X,Y,-1,0,R12),R1 is R11 + R12 - 1,
+ traverse(B,X,Y,0,1,R21),traverse(B,X,Y,0,-1,R22),R2 is R21 + R22 - 1,
+ traverse(B,X,Y,1,1,R31),traverse(B,X,Y,-1,-1,R32),R3 is R31 + R32 - 1,
+ traverse(B,X,Y,1,-1,R41),traverse(B,X,Y,-1,1,R42),R4 is R41 + R42 - 1,
+ RES1 is max(R1,R2),RES2 is max(R3,R4),RES is max(RES1,RES2).
+
+top(Board,Col,X,Y):-
+ append(I,[C|_],Board),
+ length(I,Col),
+ append(P,['-',X|_],C),
+ X\='-',
+ length(P,Y0),
+ Y is 5-(1+Y0),!.
+
+top(Board,Col,X,Y):-
+ append(I,[[X|_]|_],Board),
+ length(I,Col),
+ (   X=='-' ->  
+		 Y is 0;
+		 Y is 5
+ ).
+
+
+col_max(X,Y,COL1,_,RES,COL):-
+ X >= Y,
+ RES is X,
+ COL is COL1,!.
+
+col_max(_,Y,_,COL2,RES,COL):-
+ RES is Y,
+ COL is COL2,!.
+
+greedy(B,Mark,C):- 
+ findall((Col,Bs), (col(Col), move(B,Col,Mark,Bs),wins(Bs,Mark)),[(C,_)|_]),!.
+
+greedy(B,Mark,C):- 
+	inverse_mark(Mark,OppositeMark),
+	findall((Col,Bs), (col(Col), move(B,Col,OppositeMark,Bs),wins(Bs,OppositeMark)),[(C,_)|_]),!.
+   
+
+greedy(B,Mark,C):-
+ possible_moves(B,List),
+ inverse_mark(Mark,OppositeMark),
+ best_move(B,OppositeMark,List,_,C).
+ 
+best_move(B,Mark,[Col|OtherMoves],Res,ColRes):-
+ move(B,Col,Mark,B2),
+ top(B2,Col,_,Y),
+ get_max(B2,Col,Y,Res1),
+ best_move(B,Mark,OtherMoves,Res2,ColRes2),
+ col_max(Res1,Res2,Col,ColRes2,Res,ColRes).
+
+best_move(_,_,[],0,_).
