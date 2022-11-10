@@ -4,9 +4,9 @@
 :-dynamic maximizing/1.
 :-dynamic minimizing/1.
 
-%%%%%%%%%%%%%%%%%%
-%%%%% PARAMS %%%%%
-%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%
+%%% CLAUSES %%%
+%%%%%%%%%%%%%%%
 next_player(1,2).		%%% determines the next player after the given player
 next_player(2,1). 
 
@@ -19,34 +19,12 @@ player_mark(2,'O').
 opponent_mark(1,'O'). 	%%% the inverse mark of the given player
 opponent_mark(2,'X'). 
 
-maxDepth(5).
+maxDepth(5). 			%%% the max depth for Minimax algorithm
 
-%%%%%%%%%%%%%%%%%%
-%%% SHOW BOARD %%%
-%%%%%%%%%%%%%%%%%%
-%show(X) shows board X
-show(X):- write('  A B C D E F G'), nl,
-		 iShow(X,6).
 
-%show(X,N) shows lines [N .. 1] of board X
-iShow(_,0).
-iShow(X,N):- showLine(X,N,X2),
-	     Ns is N-1,
-	     iShow(X2,Ns).
-
-%showLine(X,N,X2) writes N and shows first line of board X (first element of every column). X2 is X without the shown line.
-showLine(X,N,X2):- write(N), write(' '),
-		   iShowLine(X,X2), nl.
-
-%iShowLine(X,X2) writes first element of every column. X2 is X without the shown line.
-iShowLine([],_).
-iShowLine([[X|X2]|XS],[X2|XS2]):- write(X), write(' '),
-			          iShowLine(XS,XS2).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Main program
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%%%%%%%%%%%%%%%%%%%
+%%% Main program %%%
+%%%%%%%%%%%%%%%%%%%%
 jouer :- welcome,				%%% Display welcome message, initialize game 
 			play(1),			%%% Play the game starting with player 1 
 				goodbye.        %%% Display end of game message
@@ -107,65 +85,6 @@ play(Player1)
 					next_player(Player1,Player2), play(Player2).
 
 %.......................................
-% wins
-%.......................................
-% Players win by having their mark X in one of the following configurations:
-% 
-%wins(T, X) is satisfied if the player with Mark X has won in board T
-%check if there's a column in T with 4 connected pieces of player X
-wins(T, X):- append(_, [C|_], T), % check if there's a column...
-	           append(_,[X,X,X,X|_],C). % ...which has 4 connected pieces of player X
-%check if there's a row in T with 4 connected pieces of player X
-wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
-		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-		   append(I2,[X|_],C2),
-		   append(I3,[X|_],C3),
-		   append(I4,[X|_],C4),
-		   length(I1,M), length(I2,M), length(I3,M), length(I4,M). %...and every piece is in the same height
-%check if there's a diagonal (type \) in T with 4 connected pieces of player X
-wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
-		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-		   append(I2,[X|_],C2),
-		   append(I3,[X|_],C3),
-		   append(I4,[X|_],C4),
-		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-		   M2 is M1+1, M3 is M2+1, M4 is M3+1. %...and every piece is within the same diagonal \
-%check if there's a diagonal (type /) in T with 4 connected pieces of player X
-wins(T, X):- append(_,[C1,C2,C3,C4|_],T), % check if 4 connected columns exists in board...
-		   append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-		   append(I2,[X|_],C2),
-		   append(I3,[X|_],C3),
-		   append(I4,[X|_],C4),
-		   length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-		   M2 is M1-1, M3 is M2-1, M4 is M3-1. %...and every piece is within the same diagonal /
-
-%.......................................
-% move
-%.......................................
-%move(T,P,X,T2) is satisfied if T2 is the board T after player with the mark X moves in column P
-% 
-move(T,P,X,T2):- append(I,[C|F],T),
-			       length(I,P), 
-    			   set_item(X,C,C2),
-			       append(I,[C2|F],T2).
-
-%set_item(X,C,C2) is satisfied if column C2 is column C after player with the mark X plays there
-set_item(X,['-'],[X]):- !. % last spot in column
-set_item(X,['-',A|AS],[X,A|AS]):- A \== ('-'), !. % play above someone's piece
-set_item(X,['-'|AS],['-'|AS2]):- set_item(X,AS,AS2). % descend column
-
-%.......................................
-% game_over
-%.......................................
-% Game is over if opponent wins or if none of the columns are empty
-%
-game_over(Player,Board) :- opponent_mark(Player, Mark), wins(Board, Mark), !.
-game_over(_,Board) :- isFull(Board). 
-
-%isFull(T) is satisfied if there isn't any free spot ('-')
-isFull(T):- \+ (append(_,[C|_],T), append(_,['-'|_],C)).
-
-%.......................................
 % readColumn
 %.......................................
 %reads a column
@@ -191,6 +110,36 @@ col(3).
 col(4).
 col(5).
 col(6).
+
+%.......................................
+% possible_moves
+%.......................................
+% It retrieves a list of possible moves (empty columns) on a board.
+% 
+possible_moves(Board,List) 
+	:-	not(wins(Board,'X')),	%%% if either player already won, 
+							%%% then there are no available moves
+		not(wins(Board,'O')),
+		top_row(Board, 0, List), !. % get the list of the column where a player can place his mark 
+		
+top_row([], _, []).
+top_row([[E|_]|R], N, [N|L]) :- E == '-', Ns is N+1, top_row(R, Ns, L).
+top_row([_|R], N, L) :- Ns is N+1, top_row(R, Ns, L).
+
+%.......................................
+% move
+%.......................................
+%move(T,P,X,T2) is satisfied if T2 is the board T after player with the mark X moves in column P
+% 
+move(T,P,X,T2):- append(I,[C|F],T),
+			       length(I,P), 
+    			   set_item(X,C,C2),
+			       append(I,[C2|F],T2).
+
+%set_item(X,C,C2) is satisfied if column C2 is column C after player with the mark X plays there
+set_item(X,['-'],[X]):- !. % last spot in column
+set_item(X,['-',A|AS],[X,A|AS]):- A \== ('-'), !. % play above someone's piece
+set_item(X,['-'|AS],['-'|AS2]):- set_item(X,AS,AS2). % descend column
 
 %.......................................
 % make_move
@@ -234,106 +183,53 @@ make_move2(computer2, Player, Board1, Board2)
 			write(L), write('.'), nl.
 
 %.......................................
-% possible_moves
+% wins
 %.......................................
-% It retrieves a list of possible moves (empty columns) on a board.
+% Players win by having their mark M in one of the following configurations:
 % 
-possible_moves(Board,List) 
-	:-	not(wins(Board,'X')),	%%% if either player already won, 
-							%%% then there are no available moves
-		not(wins(Board,'O')),
-		top_line(Board, 0, List), !. % get the list of the column where a player can place his mark 
-		
-top_line([], _, []).
-top_line([[E|_]|R], N, [N|L]) :- E == '-', Ns is N+1, top_line(R, Ns, L).
-top_line([_|R], N, L) :- Ns is N+1, top_line(R, Ns, L).
-
-		
-%.......................................
-% score
-%.......................................
-% It computes the value of a given board position
-% 
-score(Board, Depth, S) :- maximizing(M), wins(Board, M), nbTokens(Nb), S is 100 - div(Nb+Depth+1, 2), !. % We add 1 because when X plays at first the number of X tokens is odd
-score(Board, Depth, S) :- minimizing(M), wins(Board, M), nbTokens(Nb), S is div(Nb+Depth+1, 2) - 100 , !. 
-score(Board, Depth, S) :- maximizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is 28 - (div(Nb+Depth+1, 2) + H), !.
-score(Board, Depth, S) :- minimizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is div(Nb+Depth+1, 2) + H - 28 , !.
-score(_,_,0).
-
-%three_in_a_row(T, X, H) is satisfied if the player with Mark X has 3 connected X in a row in board T
-%check if there's a column in T with 3 connected pieces of player X
-three_in_a_row(T, X, H):- append(_, [C|_], T), % check if there's a column...
-	           append(_,['-',X,X,X|_],C), % ...which has 3 connected pieces of player X
-			   H is 1.
-%check if there's a row in T with 3 connected pieces of player X
-three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
-		((
-			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,[X|_],C4),
-			length(I1,M), length(I2,M), length(I3,M), length(I4,M), %...and every piece is in the same height
-			H is 6 - M
-		);(
-			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,['-'|_],C4),
-			length(I1,M), length(I2,M), length(I3,M), length(I4,M), %...and every piece is in the same height
-			H is 6 - M
-		)).
-%check if there's a diagonal (type \) in T with 3 connected pieces of player X
-three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
-		((   
-			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,[X|_],C4),
-			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-			M2 is M1+1, M3 is M2+1, M4 is M3+1, %...and every piece is within the same diagonal \
-			H is 6 - M1
-		);(
-			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,['-'|_],C4),
-			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-			M2 is M1+1, M3 is M2+1, M4 is M3+1, %...and every piece is within the same diagonal \
-			H is 6 - M4
-		)).
-%check if there's a diagonal (type /) in T with 3 connected pieces of player X
-three_in_a_row(T, X, H):- append(_,[C1,C2,C3,C4|_],T), % check if 3 connected columns exists in board...
-		((   
-			append(I1,['-'|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,[X|_],C4),
-			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-			M2 is M1-1, M3 is M2-1, M4 is M3-1, %...and every piece is within the same diagonal /
-			H is 6 - M1
-		);(
-			append(I1,[X|_],C1), %...such that all of them contain a piece of player X...
-			append(I2,[X|_],C2),
-			append(I3,[X|_],C3),
-			append(I4,['-'|_],C4),
-			length(I1,M1), length(I2,M2), length(I3,M3), length(I4,M4),
-			M2 is M1-1, M3 is M2-1, M4 is M3-1, %...and every piece is within the same diagonal /
-			H is 6 - M4
-		)).
+%wins(B, M) is satisfied if the player with mark M has won in board B
+%check if there's a column in B with 4 connected marks M
+wins(B, M):- append(_, [C|_], B), % check if there's a column...
+	           append(_,[M,M,M,M|_],C). % ...which has 4 connected marks M
+%check if there's a row in B with 4 connected marks M
+wins(B, M):- append(_,[C1,C2,C3,C4|_],B), % check if 4 connected columns exists in board...
+		   append(I1,[M|_],C1), %...such that all of them contain a mark M...
+		   append(I2,[M|_],C2),
+		   append(I3,[M|_],C3),
+		   append(I4,[M|_],C4),
+		   length(I1,L), length(I2,L), length(I3,L), length(I4,L). %...and every mark is in the same height
+%check if there's a diagonal (type \) in B with 4 connected marks M
+wins(B, M):- append(_,[C1,C2,C3,C4|_],B), % check if 4 connected columns exists in board...
+		   append(I1,[M|_],C1), %...such that all of them contain a mark M...
+		   append(I2,[M|_],C2),
+		   append(I3,[M|_],C3),
+		   append(I4,[M|_],C4),
+		   length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+		   L2 is L1+1, L3 is L2+1, L4 is L3+1. %...and every mark is within the same diagonal \
+%check if there's a diagonal (type /) in B with 4 connected marks M
+wins(B, M):- append(_,[C1,C2,C3,C4|_],B), % check if 4 connected columns exists in board...
+		   append(I1,[M|_],C1), %...such that all of them contain a mark M...
+		   append(I2,[M|_],C2),
+		   append(I3,[M|_],C3),
+		   append(I4,[M|_],C4),
+		   length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+		   L2 is L1-1, L3 is L2-1, L4 is L3-1. %...and every mark is within the same diagonal /
 
 %.......................................
-% minimax
+% game_over
 %.......................................
-% The minimax algorithm always assumes an optimal opponent.
-% For tic-tac-toe, optimal play will always result in a draw, 
-% so the algorithm is effectively playing not-to-lose. 
+% Game is over if opponent wins or if none of the columns are empty
+%
+game_over(Player,Board) :- opponent_mark(Player, Mark), wins(Board, Mark), !.
+game_over(_,Board) :- isFull(Board). 
 
-% For the opening move against an optimal player, the best 
-% minimax can ever hope for is a draw. Technically speaking, 
-% any opening move is acceptable. Save the user the trouble 
-% of waiting for the computer to search the entire minimax tree
-% by simply selecting a random column. 
- 
+%isFull(T) is satisfied if there isn't any free spot ('-')
+isFull(T):- \+ (append(_,[C|_],T), append(_,['-'|_],C)).
+
+
+%%%%%%%%%%%%%%%
+%%% Minimax %%%
+%%%%%%%%%%%%%%%
 minimax(_,[['-','-','-','-','-','-'],
 			['-','-','-','-','-','-'],
 			['-','-','-','-','-','-'],
@@ -414,34 +310,82 @@ better(_,_,_,_,Column2,Score2,Column2,Score2).
 better2(_,R,_,Column1,Score1,_,_,Column1,Score1) :- R < 6, !.
 better2(_,_,_,_,_,Column2,Score2,Column2,Score2).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Output and display
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%.......................................
+% score
+%.......................................
+% It computes the value of a given board position
+% 
+score(Board, Depth, S) :- maximizing(M), wins(Board, M), nbTokens(Nb), S is 100 - div(Nb+Depth+1, 2), !. % We add 1 because when X plays at first the number of X tokens is odd
+score(Board, Depth, S) :- minimizing(M), wins(Board, M), nbTokens(Nb), S is div(Nb+Depth+1, 2) - 100 , !. 
+score(Board, Depth, S) :- maximizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is 28 - (div(Nb+Depth+1, 2) + H), !.
+score(Board, Depth, S) :- minimizing(M), three_in_a_row(Board, M, H), nbTokens(Nb), S is div(Nb+Depth+1, 2) + H - 28 , !.
+score(_,_,0).
 
-output_players :-
-	nl, player(1, Who1),
-	write('Le joueur 1 est '),	%%% either human or computer1 or computer2
-	write(Who1), 
-	nl, player(2, Who2),
-	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
-	write(Who2), nl, nl, ! .
+%three_in_a_row(B, M, H) is satisfied if 3 marks M are connected in board B
+%check if there's a column in B with 3 connected marks M
+three_in_a_row(B, M, H):- append(_, [C|_], B), % check if there's a column...
+	           append(_,['-',M,M,M|_],C), % ...which has 3 connected marks M
+			   H is 1.
+%check if there's a row in B with 3 connected marks M
+three_in_a_row(B, M, H):- append(_,[C1,C2,C3,C4|_],B), % check if 3 connected columns exists in board...
+		((
+			append(I1,['-'|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,[M|_],C4),
+			length(I1,L), length(I2,L), length(I3,L), length(I4,L), %...and every piece is in the same height
+			H is 6 - L
+		);(
+			append(I1,[M|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,L), length(I2,L), length(I3,L), length(I4,L), %...and every piece is in the same height
+			H is 6 - L
+		)).
+%check if there's a diagonal (type \) in B with 3 connected marks M
+three_in_a_row(B, M, H):- append(_,[C1,C2,C3,C4|_],B), % check if 3 connected columns exists in board...
+		((   
+			append(I1,['-'|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,[M|_],C4),
+			length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+			L2 is L1+1, L3 is L2+1, L4 is L3+1, %...and every piece is within the same diagonal \
+			H is 6 - L1
+		);(
+			append(I1,[M|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+			L2 is L1+1, L3 is L2+1, L4 is L3+1, %...and every piece is within the same diagonal \
+			H is 6 - L4
+		)).
+%check if there's a diagonal (type /) in B with 3 connected marks M
+three_in_a_row(B, M, H):- append(_,[C1,C2,C3,C4|_],B), % check if 3 connected columns exists in board...
+		((   
+			append(I1,['-'|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,[M|_],C4),
+			length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+			L2 is L1-1, L3 is L2-1, L4 is L3-1, %...and every piece is within the same diagonal /
+			H is 6 - L1
+		);(
+			append(I1,[M|_],C1), %...such that all of them contain a mark M...
+			append(I2,[M|_],C2),
+			append(I3,[M|_],C3),
+			append(I4,['-'|_],C4),
+			length(I1,L1), length(I2,L2), length(I3,L3), length(I4,L4),
+			L2 is L1-1, L3 is L2-1, L4 is L3-1, %...and every piece is within the same diagonal /
+			H is 6 - L4
+		)).
 
- output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
- output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
- output_winner(_) :- write('No winner: Draw').
 
-output_value(1,Column,Score) 
-	:- nl, write('Column '), write(Column), write(', score: '), write(Score), !.
-output_value(_,_,_).
-
-output_token :- nl, write('nbTokens '), nbTokens(Nb), write(Nb), nl, !.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  		Greedy 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
+%%%%%%%%%%%%%%
+%%% Greedy %%%
+%%%%%%%%%%%%%%
 % returns the mark Res in the column Col and in the row Row from the board Board
 piece(Board,Col,Row,Res):-
 	append(I,[C|_],Board),
@@ -475,7 +419,6 @@ get_max(B,X,Y,RES):-
  traverse(B,X,Y,1,-1,R41),traverse(B,X,Y,-1,1,R42),R4 is R41 + R42 - 1,
  RES1 is max(R1,R2),RES2 is max(R3,R4),RES is max(RES1,RES2).
 
-
 % returns the top piece Mark and its height Y in a column Col
 top(Board,Col,Mark,Y):-
  append(I,[C|_],Board),
@@ -492,7 +435,6 @@ top(Board,Col,Mark,Y):-
 		 Y is 0;
 		 Y is 5
  ).
-
 
 % returns the col Col with the highest score Res
 % if Res1 and Res2 are equal, returns a random Col between Col1 and Col2
@@ -543,4 +485,44 @@ greedy(B,Mark,C):-
  possible_moves(B,List),
  inverse_mark(Mark,OppositeMark),
  best_move(B,OppositeMark,List,_,C).
- 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% OUTPUT AND DISPLAY %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%show(X) shows board X
+show(X):- write('  A B C D E F G'), nl,
+		 iShow(X,6).
+
+%show(X,N) shows lines [N .. 1] of board X
+iShow(_,0).
+iShow(X,N):- showLine(X,N,X2),
+	     Ns is N-1,
+	     iShow(X2,Ns).
+
+%showLine(X,N,X2) writes N and shows first line of board X (first element of every column). X2 is X without the shown line.
+showLine(X,N,X2):- write(N), write(' '),
+		   iShowLine(X,X2), nl.
+
+%iShowLine(X,X2) writes first element of every column. X2 is X without the shown line.
+iShowLine([],_).
+iShowLine([[X|X2]|XS],[X2|XS2]):- write(X), write(' '),
+			          iShowLine(XS,XS2).
+
+output_players :-
+	nl, player(1, Who1),
+	write('Le joueur 1 est '),	%%% either human or computer1 or computer2
+	write(Who1), 
+	nl, player(2, Who2),
+	write('Le joueur 2 est '),	%%% either human or computer1 or computer2
+	write(Who2), nl, nl, ! .
+
+ output_winner(Board) :- wins(Board,'X'), write('X gagne.'), !.
+ output_winner(Board) :- wins(Board,'O'), write('O gagne.'), !.
+ output_winner(_) :- write('No winner: Draw').
+
+output_value(1,Column,Score) 
+	:- nl, write('Column '), write(Column), write(', score: '), write(Score), !.
+output_value(_,_,_).
+
+output_token :- nl, write('nbTokens '), nbTokens(Nb), write(Nb), nl, !.
