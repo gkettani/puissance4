@@ -1,5 +1,3 @@
-% import possible moves
-
 :- module(greedy, [greedy/3]).
 
 :- use_module(util).
@@ -65,7 +63,7 @@ get_max(B,X,Y,RES):-
 top(Board,Col,Mark,Y):-
  append(I,[C|_],Board),
  length(I,Col),
- append(P,['-',X|_],C),
+ append(P,['-'|_],C),
  Mark\='-',
  length(P,Y0),
  Y is 5-(1+Y0),!.

@@ -3,18 +3,19 @@
 %%%%%%%%%%%%%%
 %%% Public %%%
 %%%%%%%%%%%%%%
+
 inverse_mark('X','O'). 	%%% determines the opposite of the given mark
 inverse_mark('O','X'). 
 
 %.......................................
 % move
 %.......................................
-%move(T,P,X,T2) is satisfied if T2 is the board T after player with the mark X moves in column P
+%move(Board,N,M,Board2) is satisfied if Board2 is Board after player with the mark M moves in column N
 % 
-move(T,P,X,T2):- append(I,[C|F],T),
-			       length(I,P), 
-    			   set_item(X,C,C2),
-			       append(I,[C2|F],T2).
+move(Board,N,M,Board2):- append(I,[C|R],Board),
+			       length(I,N), 
+    			   set_item(M,C,C2),
+			       append(I,[C2|R],Board2).
 
 %.......................................
 % possible_moves
@@ -65,10 +66,10 @@ wins(B, M):- append(_,[C1,C2,C3,C4|_],B), % check if 4 connected columns exists 
 %%% Private %%%
 %%%%%%%%%%%%%%%
 
-%set_item(X,C,C2) is satisfied if column C2 is column C after player with the mark X plays there
-set_item(X,['-'],[X]):- !. % last spot in column
-set_item(X,['-',A|AS],[X,A|AS]):- A \== ('-'), !. % play above someone's piece
-set_item(X,['-'|AS],['-'|AS2]):- set_item(X,AS,AS2). % descend column
+%set_item(M,C,C2) is satisfied if column C2 is column C after player with the mark M plays there
+set_item(M,['-'],[M]):- !. % last spot in column
+set_item(M,['-',A|AS],[M,A|AS]):- A \== ('-'), !. % play above someone's piece
+set_item(M,['-'|AS],['-'|AS2]):- set_item(M,AS,AS2). % descend column
 
 %top_row(B, N, L) is satisfied if L is the list of the columns in board B where a player can place his mark
 top_row([], _, []).

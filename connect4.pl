@@ -1,4 +1,3 @@
-
 :- use_module(util).
 :- use_module(minimax).
 :- use_module(greedy).

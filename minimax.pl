@@ -1,4 +1,3 @@
-
 :- module(minimax, [minimax/5, nbTokens/1, maximizing/1, minimizing/1]).
 
 :- use_module(util).
