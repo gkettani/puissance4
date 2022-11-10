@@ -63,7 +63,7 @@ get_max(B,X,Y,RES):-
 top(Board,Col,Mark,Y):-
  append(I,[C|_],Board),
  length(I,Col),
- append(P,['-'|_],C),
+ append(P,['-',Mark|_],C),
  Mark\='-',
  length(P,Y0),
  Y is 5-(1+Y0),!.
